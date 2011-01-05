@@ -253,6 +253,7 @@ qq.FileUploaderBasic = function(o){
         // set to true to see the server response
         debug: false,
         action: '/server/upload',
+        method: 'POST',
         params: {},
         button: null,
         multiple: true,
@@ -322,7 +323,8 @@ qq.FileUploaderBasic.prototype = {
 
         var handler = new qq[handlerClass]({
             debug: this._options.debug,
-            action: this._options.action,         
+            action: this._options.action,
+            method: this._options.method,    
             maxConnections: this._options.maxConnections,   
             onProgress: function(id, fileName, loaded, total){                
                 self._onProgress(id, fileName, loaded, total);
@@ -1192,12 +1194,12 @@ qq.extend(qq.UploadHandlerXhr.prototype, {
             }
         };
 
-        // build query string
+        // build query string       
         params = params || {};
         params['qqfile'] = name;
         var queryString = qq.obj2url(params, this._options.action);
 
-        xhr.open("POST", queryString, true);
+        xhr.open(self._options.method, queryString, true);
         xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
         xhr.setRequestHeader("X-File-Name", encodeURIComponent(name));
         xhr.setRequestHeader("Content-Type", "application/octet-stream");
