@@ -882,7 +882,7 @@ qq.UploadHandlerAbstract.prototype = {
     /**
      * Sends the file identified by id and additional query params to the server
      */
-    upload: function(id, params){
+    upload: function(id, params, uri){
         var len = this._queue.push(id);
 
         var copy = {};        
@@ -891,7 +891,7 @@ qq.UploadHandlerAbstract.prototype = {
                 
         // if too many active uploads, wait...
         if (len <= this._options.maxConnections){               
-            this._upload(id, this._params[id]);
+            this._upload(id, this._params[id], uri);
         }
     },
     /**
@@ -994,7 +994,7 @@ qq.extend(qq.UploadHandlerForm.prototype, {
             qq.remove(iframe);
         }
     },     
-    _upload: function(id, params){                        
+    _upload: function(id, params, action){                        
         var input = this._inputs[id];
         
         if (!input){
@@ -1004,7 +1004,7 @@ qq.extend(qq.UploadHandlerForm.prototype, {
         var fileName = this.getName(id);
                 
         var iframe = this._createIframe(id);
-        var form = this._createForm(iframe, params);
+        var form = this._createForm(iframe, params, action);
         form.appendChild(input);
 
         var self = this;
@@ -1093,7 +1093,7 @@ qq.extend(qq.UploadHandlerForm.prototype, {
     /**
      * Creates form, that will be submitted to iframe
      */
-    _createForm: function(iframe, params){
+    _createForm: function(iframe, params, action){
         // We can't use the following code in IE6
         // var form = document.createElement('form');
         // form.setAttribute('method', 'post');
@@ -1101,7 +1101,7 @@ qq.extend(qq.UploadHandlerForm.prototype, {
         // Because in this case file won't be attached to request
         var form = qq.toElement('<form method="post" enctype="multipart/form-data"></form>');
 
-        var queryString = qq.obj2url(params, this._options.action);
+        var queryString = qq.obj2url(params, action || this._options.action);
 
         form.setAttribute('action', queryString);
         form.setAttribute('target', iframe.name);
@@ -1171,7 +1171,7 @@ qq.extend(qq.UploadHandlerXhr.prototype, {
      * Sends the file identified by id and additional query params to the server
      * @param {Object} params name-value string pairs
      */    
-    _upload: function(id, params){
+    _upload: function(id, params, action){
         var file = this._files[id],
             name = this.getName(id),
             size = this.getSize(id);
@@ -1197,7 +1197,7 @@ qq.extend(qq.UploadHandlerXhr.prototype, {
         // build query string       
         params = params || {};
         params['qqfile'] = name;
-        var queryString = qq.obj2url(params, this._options.action);
+        var queryString = qq.obj2url(params, action || this._options.action);
 
         xhr.open(self._options.method, queryString, true);
         xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
