@@ -1202,7 +1202,7 @@ qq.extend(qq.UploadHandlerXhr.prototype, {
         xhr.open(self._options.method, queryString, true);
         xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
         xhr.setRequestHeader("X-File-Name", encodeURIComponent(name));
-        xhr.setRequestHeader("Content-Type", "application/octet-stream");
+        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
         xhr.setRequestHeader("Content-Disposition", "attachment; filename=\"" 
                                                 +  name + "\"");
         xhr.send(file);
