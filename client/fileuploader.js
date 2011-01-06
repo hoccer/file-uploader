@@ -315,13 +315,11 @@ qq.FileUploaderBasic.prototype = {
         var self = this,
             handlerClass;        
         
-        if(qq.UploadHandlerXhr.isSupported()){           
-            handlerClass = 'UploadHandlerXhr';                        
-        } else {
-            handlerClass = 'UploadHandlerForm';
-        }
-
-        var handler = new qq[handlerClass]({
+        if(!qq.UploadHandlerXhr.isSupported()) {
+            throw new Error("Browser does not support XMLHttpRequest");
+        }       
+        
+        var handler = new qq.UploadHandlerXhr[handlerClass]({
             debug: this._options.debug,
             action: this._options.action,
             method: this._options.method,    
@@ -948,169 +946,6 @@ qq.UploadHandlerAbstract.prototype = {
         }
     }        
 };
-
-/**
- * Class for uploading files using form and iframe
- * @inherits qq.UploadHandlerAbstract
- */
-qq.UploadHandlerForm = function(o){
-    qq.UploadHandlerAbstract.apply(this, arguments);
-       
-    this._inputs = {};
-};
-// @inherits qq.UploadHandlerAbstract
-qq.extend(qq.UploadHandlerForm.prototype, qq.UploadHandlerAbstract.prototype);
-
-qq.extend(qq.UploadHandlerForm.prototype, {
-    add: function(fileInput){
-        fileInput.setAttribute('name', 'qqfile');
-        var id = 'qq-upload-handler-iframe' + qq.getUniqueId();       
-        
-        this._inputs[id] = fileInput;
-        
-        // remove file input from DOM
-        if (fileInput.parentNode){
-            qq.remove(fileInput);
-        }
-                
-        return id;
-    },
-    getName: function(id){
-        // get input value and remove path to normalize
-        return this._inputs[id].value.replace(/.*(\/|\\)/, "");
-    },    
-    _cancel: function(id){
-        this._options.onCancel(id, this.getName(id));
-        
-        delete this._inputs[id];        
-
-        var iframe = document.getElementById(id);
-        if (iframe){
-            // to cancel request set src to something else
-            // we use src="javascript:false;" because it doesn't
-            // trigger ie6 prompt on https
-            iframe.setAttribute('src', 'javascript:false;');
-
-            qq.remove(iframe);
-        }
-    },     
-    _upload: function(id, params, action){                        
-        var input = this._inputs[id];
-        
-        if (!input){
-            throw new Error('file with passed id was not added, or already uploaded or cancelled');
-        }                
-
-        var fileName = this.getName(id);
-                
-        var iframe = this._createIframe(id);
-        var form = this._createForm(iframe, params, action);
-        form.appendChild(input);
-
-        var self = this;
-        this._attachLoadEvent(iframe, function(){                                 
-            self.log('iframe loaded');
-            
-            var response = self._getIframeContentJSON(iframe);
-
-            self._options.onComplete(id, fileName, response);
-            self._dequeue(id);
-            
-            delete self._inputs[id];
-            // timeout added to fix busy state in FF3.6
-            setTimeout(function(){
-                qq.remove(iframe);
-            }, 1);
-        });
-
-        form.submit();        
-        qq.remove(form);        
-        
-        return id;
-    }, 
-    _attachLoadEvent: function(iframe, callback){
-        qq.attach(iframe, 'load', function(){
-            // when we remove iframe from dom
-            // the request stops, but in IE load
-            // event fires
-            if (!iframe.parentNode){
-                return;
-            }
-
-            // fixing Opera 10.53
-            if (iframe.contentDocument &&
-                iframe.contentDocument.body &&
-                iframe.contentDocument.body.innerHTML == "false"){
-                // In Opera event is fired second time
-                // when body.innerHTML changed from false
-                // to server response approx. after 1 sec
-                // when we upload file with iframe
-                return;
-            }
-
-            callback();
-        });
-    },
-    /**
-     * Returns json object received by iframe from server.
-     */
-    _getIframeContentJSON: function(iframe){
-        // iframe.contentWindow.document - for IE<7
-        var doc = iframe.contentDocument ? iframe.contentDocument: iframe.contentWindow.document,
-            response;
-        
-        this.log("converting iframe's innerHTML to JSON");
-        this.log("innerHTML = " + doc.body.innerHTML);
-                        
-        try {
-            response = eval("(" + doc.body.innerHTML + ")");
-        } catch(err){
-            response = {};
-        }        
-
-        return response;
-    },
-    /**
-     * Creates iframe with unique name
-     */
-    _createIframe: function(id){
-        // We can't use following code as the name attribute
-        // won't be properly registered in IE6, and new window
-        // on form submit will open
-        // var iframe = document.createElement('iframe');
-        // iframe.setAttribute('name', id);
-
-        var iframe = qq.toElement('<iframe src="javascript:false;" name="' + id + '" />');
-        // src="javascript:false;" removes ie6 prompt on https
-
-        iframe.setAttribute('id', id);
-
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-
-        return iframe;
-    },
-    /**
-     * Creates form, that will be submitted to iframe
-     */
-    _createForm: function(iframe, params, action){
-        // We can't use the following code in IE6
-        // var form = document.createElement('form');
-        // form.setAttribute('method', 'post');
-        // form.setAttribute('enctype', 'multipart/form-data');
-        // Because in this case file won't be attached to request
-        var form = qq.toElement('<form method="post" enctype="multipart/form-data"></form>');
-
-        var queryString = qq.obj2url(params, action || this._options.action);
-
-        form.setAttribute('action', queryString);
-        form.setAttribute('target', iframe.name);
-        form.style.display = 'none';
-        document.body.appendChild(form);
-
-        return form;
-    }
-});
 
 /**
  * Class for uploading files using xhr
