@@ -1031,7 +1031,6 @@ qq.extend(qq.UploadHandlerXhr.prototype, {
 
         // build query string       
         params = params || {};
-        params['qqfile'] = name;
         var queryString = qq.obj2url(params, action || this._options.action);
 
         xhr.open(self._options.method, queryString, true);
